@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Project-specific: generated run outputs and user data files should not
+# be committed -- they're regenerated every run and may contain real
+# personal/customer data from the spreadsheets you process.
+output/
+*.db
+*.sqlite
+*.sqlite3
+
+# Don't commit your own real input spreadsheets by default -- uncomment
+# the line below if you want to keep sample/test fixtures out too, but
+# tests/fixtures/messy_sample.xlsx and input/sample_messy_data.xlsx are
+# intentionally tracked since the test suite depends on them.
+input/*
+!input/sample_messy_data.xlsx
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs (also produced fresh each run)
+*.log

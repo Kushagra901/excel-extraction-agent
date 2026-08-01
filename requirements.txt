@@ -1,0 +1,14 @@
+# Core (required)
+openpyxl>=3.1.0
+pandas>=2.0.0
+PyYAML>=6.0.0
+typer>=0.12.0
+
+# Optional but recommended -- faster, better fuzzy header matching.
+# If not installed, the Schema Mapping Agent automatically falls back
+# to Python's built-in difflib (slower, slightly less accurate).
+rapidfuzz>=3.0.0
+
+# Optional -- only needed if you run with --enable-local-llm.
+# Install Ollama separately from https://ollama.com (free, local).
+# No Python package required; llm_optional.py talks to it over localhost HTTP.

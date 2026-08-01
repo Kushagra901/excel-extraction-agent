@@ -1,0 +1,27 @@
+# Configuration for the Excel Extraction Agent System.
+# All keys are optional -- any key you omit falls back to the default
+# defined in src/utils/file_helpers.py::DEFAULT_CONFIG.
+
+# Minimum fuzzy-match similarity (0.0 - 1.0) for a header to be mapped to
+# a canonical field without exact match. Lower = more aggressive mapping,
+# higher = more headers left "unmapped" for manual review.
+fuzzy_match_threshold: 0.72
+
+# A sheet is flagged as "sparse" in the report if this fraction (or more)
+# of its cells are empty.
+sparse_row_threshold: 0.9
+
+# When checking for duplicate records within a sheet, these canonical
+# fields are tried in order -- the first one present on a record is used
+# as its dedup key.
+duplicate_key_fields:
+  - email
+  - id
+  - full_name
+
+# Optional local LLM assist (via Ollama, http://localhost:11434) for
+# headers that fuzzy matching cannot confidently map. Fully local, free,
+# no data leaves your machine. Requires `ollama pull llama3.1` (or your
+# chosen model) and `ollama serve` running locally.
+enable_local_llm: false
+llm_model: "llama3.1"
