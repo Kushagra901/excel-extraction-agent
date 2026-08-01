@@ -1,0 +1,9 @@
+# Optional -- only needed to run the Streamlit UI (app.py).
+# The core CLI pipeline (cli.py) does NOT require this.
+#
+# Install with:
+#   pip install -r requirements-ui.txt
+# Then run:
+#   streamlit run app.py
+
+streamlit>=1.35.0

@@ -16,6 +16,7 @@ from src.agents.excel_reader import ExcelReaderAgent
 from src.agents.output_formatter import OutputFormatterAgent
 from src.agents.record_extractor import RecordExtractionAgent
 from src.agents.schema_mapper import SchemaMapperAgent
+from src.agents.sqlite_writer import SQLiteWriterAgent
 from src.agents.validator import ValidationAgent
 from src.core.models import ExtractionContext, IssueSeverity
 from src.utils.file_helpers import make_run_output_dir
@@ -28,11 +29,12 @@ class Supervisor:
     def __init__(self, config: dict):
         self.config = config
 
-    def run(self, input_path: Path, base_output_dir: Path, verbose: bool = False) -> ExtractionContext:
+    def run(self, input_path: Path, base_output_dir: Path, verbose: bool = False,
+            sqlite_db_path: Path | None = None) -> ExtractionContext:
         run_dir = make_run_output_dir(base_output_dir)
         setup_logging(run_dir / "error_log.txt", verbose=verbose)
         try:
-            return self._run_pipeline(input_path, run_dir)
+            return self._run_pipeline(input_path, run_dir, sqlite_db_path)
         finally:
             # Always release the log file's OS-level handle before returning,
             # regardless of which exit path was taken (success, read failure,
@@ -41,7 +43,8 @@ class Supervisor:
             # in tests) because the file handle is still open.
             close_logging()
 
-    def _run_pipeline(self, input_path: Path, run_dir: Path) -> ExtractionContext:
+    def _run_pipeline(self, input_path: Path, run_dir: Path,
+                       sqlite_db_path: Path | None = None) -> ExtractionContext:
         logger.info("Starting extraction run for '%s' -> output dir '%s'", input_path, run_dir)
 
         ctx = ExtractionContext(input_path=str(input_path), output_dir=str(run_dir))
@@ -98,6 +101,12 @@ class Supervisor:
             ctx.validation_reports.append(report)
 
         formatter.write_all(ctx, run_dir)
+
+        if sqlite_db_path is not None:
+            sqlite_writer = SQLiteWriterAgent()
+            sqlite_writer.write(ctx, sqlite_db_path)
+            logger.info("Also persisted records to SQLite database: %s", sqlite_db_path)
+
         logger.info("Extraction run complete. %d total records across %d sheets.",
                      len(ctx.records), len(ctx.validation_reports))
         return ctx

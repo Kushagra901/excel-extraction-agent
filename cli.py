@@ -29,6 +29,9 @@ def extract(
                                       help="Path to config.yaml."),
     enable_local_llm: bool = typer.Option(False, "--enable-local-llm",
                                            help="Use a local Ollama model for ambiguous headers."),
+    sqlite_db: Path = typer.Option(None, "--sqlite-db",
+                                    help="Also append extracted records to this local SQLite "
+                                         "database file (created if it doesn't exist)."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose console logging."),
 ) -> None:
     """Extract structured data from a messy Excel workbook."""
@@ -37,11 +40,13 @@ def extract(
         config["enable_local_llm"] = True
 
     supervisor = Supervisor(config=config)
-    ctx = supervisor.run(input_file, output_dir, verbose=verbose)
+    ctx = supervisor.run(input_file, output_dir, verbose=verbose, sqlite_db_path=sqlite_db)
 
     typer.echo("")
     typer.echo(f"Done. {len(ctx.records)} records extracted from {len(ctx.sheet_profiles)} sheet(s).")
     typer.echo(f"Output written to: {ctx.output_dir}")
+    if sqlite_db:
+        typer.echo(f"Records also appended to SQLite database: {sqlite_db}")
 
 
 if __name__ == "__main__":
