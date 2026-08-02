@@ -94,3 +94,53 @@ def test_log_file_handle_released_after_run():
             f"Logger still has {len(agent_logger.handlers)} attached handler(s) "
             f"after run() returned -- the log file handle was not released."
         )
+
+
+def test_cross_sheet_duplicate_detection(tmp_path):
+    import openpyxl
+
+    wb = openpyxl.Workbook()
+    ws1 = wb.active
+    ws1.title = "Customers1"
+    ws1.append(["Email", "Name"])
+    ws1.append(["alice@example.com", "Alice Smith"])
+    ws1.append(["bob@example.com", "Bob Jones"])
+
+    ws2 = wb.create_sheet(title="Customers2")
+    ws2.append(["Email Address", "Full Name"])
+    ws2.append(["alice@example.com", "Alice S."])
+    ws2.append(["charlie@example.com", "Charlie Brown"])
+
+    excel_path = tmp_path / "multi_sheet_dups.xlsx"
+    wb.save(excel_path)
+
+    supervisor = Supervisor(config=dict(DEFAULT_CONFIG))
+    ctx = supervisor.run(excel_path, tmp_path / "output")
+
+    assert len(ctx.cross_sheet_duplicates) == 1
+    ref1, ref2 = ctx.cross_sheet_duplicates[0]
+    assert "Customers1" in ref1
+    assert "Customers2" in ref2
+
+    report_text = (Path(ctx.output_dir) / "extraction_report.md").read_text(encoding="utf-8")
+    assert "## Cross-Sheet Duplicates" in report_text
+    assert "Customers1" in report_text and "Customers2" in report_text
+
+
+def test_dedupe_headers_logs_warning_on_rename():
+    from src.core.models import ExtractionContext, IssueSeverity
+    ctx = ExtractionContext(input_path="test.xlsx", output_dir="output")
+    headers = ["Name", "Name", "Email"]
+    deduped = Supervisor._dedupe_headers(headers, "Sheet1", ctx)
+    assert deduped == ["Name", "Name_2", "Email"]
+
+    warning_issues = [
+        i for i in ctx.issues
+        if i.severity == IssueSeverity.WARNING
+        and "Duplicate header 'Name' renamed to 'Name_2'" in i.message
+    ]
+    assert len(warning_issues) == 1
+    assert warning_issues[0].column == "Name_2"
+    assert warning_issues[0].sheet == "Sheet1"
+
+

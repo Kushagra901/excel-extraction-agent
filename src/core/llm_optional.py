@@ -27,6 +27,19 @@ DEFAULT_MODEL = "llama3.1"
 TIMEOUT_SECONDS = 8
 
 
+def _sanitize_header(header: str) -> str:
+    """Sanitize raw header for inclusion in LLM prompt:
+    - Truncate to max 100 characters.
+    - Remove newlines, tabs, and control characters (ASCII < 32).
+    - Replace double quotes with single quotes.
+    """
+    if not header:
+        return ""
+    truncated = header[:100]
+    cleaned = "".join(c for c in truncated if ord(c) >= 32)
+    return cleaned.replace('"', "'")
+
+
 def suggest_canonical_field(raw_header: str, canonical_fields: list[str],
                              model: str = DEFAULT_MODEL) -> Optional[str]:
     """
@@ -35,11 +48,18 @@ def suggest_canonical_field(raw_header: str, canonical_fields: list[str],
     LLM call failed or Ollama isn't reachable -- callers must treat a
     None return the same as "stay unmapped", never as an error to crash on.
     """
+    sanitized = _sanitize_header(raw_header)
+    if sanitized != raw_header:
+        logger.warning(
+            "Sanitized header for LLM prompt: raw='%s' -> sanitized='%s'",
+            raw_header, sanitized
+        )
+
     prompt = (
         "You are helping map a messy spreadsheet column header to a canonical "
         "field name. Respond with EXACTLY ONE of these values and nothing else: "
         f"{', '.join(canonical_fields)}, or none.\n\n"
-        f"Header: \"{raw_header}\"\n"
+        f"Header: \"{sanitized}\"\n"
         "Canonical field:"
     )
     payload = json.dumps({
@@ -61,7 +81,9 @@ def suggest_canonical_field(raw_header: str, canonical_fields: list[str],
                         exc, raw_header)
         return None
 
+    if answer == "none":
+        return "none"
     for field in canonical_fields:
-        if field in answer:
+        if answer == field.lower():
             return field
     return None

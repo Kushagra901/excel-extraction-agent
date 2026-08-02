@@ -7,6 +7,19 @@
 # higher = more headers left "unmapped" for manual review.
 fuzzy_match_threshold: 0.72
 
+# Maximum processing time in seconds for the extraction pipeline before timing out.
+max_processing_time_seconds: 300
+
+# Maximum number of rows to process per worksheet (set to 0 for unlimited).
+max_rows_per_sheet: 100000
+
+# Whether to detect formula presence across sheets. Set to false to speed up processing.
+detect_formulas: true
+
+# Cross-sheet duplicate detection and deduplication.
+cross_sheet_dedup: true
+cross_sheet_overlap_threshold: 0.8
+
 # A sheet is flagged as "sparse" in the report if this fraction (or more)
 # of its cells are empty.
 sparse_row_threshold: 0.9
@@ -25,3 +38,7 @@ duplicate_key_fields:
 # chosen model) and `ollama serve` running locally.
 enable_local_llm: false
 llm_model: "llama3.1"
+
+# Date parsing format preference: "us" (MM/DD/YYYY) or "international" (DD/MM/YYYY).
+date_locale: "us"
+

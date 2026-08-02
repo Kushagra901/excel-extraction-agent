@@ -23,7 +23,7 @@ _NON_DIGIT_RE = re.compile(r"[^\d+]")
 _CURRENCY_SYMBOLS_RE = re.compile(r"[$€£₹,]")
 
 # Order matters: tried top to bottom until one parses cleanly.
-_DATE_FORMATS = [
+_DATE_FORMATS_US = [
     "%Y-%m-%d",
     "%m/%d/%Y",
     "%d/%m/%Y",
@@ -37,6 +37,50 @@ _DATE_FORMATS = [
     "%m/%d/%y",
     "%d/%m/%y",
 ]
+
+_DATE_FORMATS_INTL = [
+    "%Y-%m-%d",
+    "%d/%m/%Y",
+    "%m/%d/%Y",
+    "%d-%m-%Y",
+    "%m-%d-%Y",
+    "%Y/%m/%d",
+    "%B %d, %Y",
+    "%b %d, %Y",
+    "%d %B %Y",
+    "%d %b %Y",
+    "%d/%m/%y",
+    "%m/%d/%y",
+]
+
+_DATE_FORMATS = _DATE_FORMATS_US
+
+
+def get_date_formats(locale: str = "us") -> list[str]:
+    if locale and locale.lower() == "international":
+        return _DATE_FORMATS_INTL
+    return _DATE_FORMATS_US
+
+
+def detect_ambiguous_date(text: str) -> bool:
+    """Check if a date string produces different valid dates under US (MM/DD) vs International (DD/MM) formats."""
+    if not isinstance(text, str):
+        return False
+    us_date = None
+    intl_date = None
+    for fmt in ("%m/%d/%Y", "%m-%d-%Y", "%m/%d/%y"):
+        try:
+            us_date = dt.datetime.strptime(text, fmt).date()
+            break
+        except ValueError:
+            continue
+    for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%d/%m/%y"):
+        try:
+            intl_date = dt.datetime.strptime(text, fmt).date()
+            break
+        except ValueError:
+            continue
+    return us_date is not None and intl_date is not None and us_date != intl_date
 
 
 def is_placeholder_null(value: Any) -> bool:
@@ -63,7 +107,7 @@ def clean_text(value: Any) -> tuple[Optional[str], bool, Optional[str]]:
     return text, True, None
 
 
-def parse_date_flexible(value: Any) -> tuple[Optional[str], bool, Optional[str]]:
+def parse_date_flexible(value: Any, locale: str = "us") -> tuple[Optional[str], bool, Optional[str]]:
     """Returns an ISO 8601 date string (YYYY-MM-DD) or (None, False, note)."""
     if is_placeholder_null(value):
         return None, False, None
@@ -78,11 +122,21 @@ def parse_date_flexible(value: Any) -> tuple[Optional[str], bool, Optional[str]]
     if text is None:
         return None, False, None
 
-    for fmt in _DATE_FORMATS:
+    formats = get_date_formats(locale)
+    for fmt in formats:
         try:
             parsed = dt.datetime.strptime(text, fmt)
-            note = None if fmt == "%Y-%m-%d" else f"parsed using fallback format '{fmt}'"
-            return parsed.date().isoformat(), True, note
+            res_str = parsed.date().isoformat()
+            notes = []
+            if fmt != "%Y-%m-%d":
+                notes.append(f"parsed using fallback format '{fmt}'")
+            if detect_ambiguous_date(text):
+                notes.append(
+                    f"Ambiguous date '{text}' — interpreted as {res_str} using {locale} format. "
+                    "Set date_locale in config to change."
+                )
+            note = "; ".join(notes) if notes else None
+            return res_str, True, note
         except ValueError:
             continue
 

@@ -20,7 +20,9 @@ import logging
 from typing import Any
 
 from src.core.canonical_schema import CANONICAL_SCHEMA
-from src.core.cleaning_rules import CLEANERS, is_placeholder_null, normalize_whitespace
+from src.core.cleaning_rules import (
+    CLEANERS, is_placeholder_null, normalize_whitespace, parse_date_flexible,
+)
 from src.core.models import ExtractionContext, FieldMapping, IssueSeverity
 
 logger = logging.getLogger("excel_agent.data_cleaner")
@@ -37,6 +39,9 @@ class CleanRow:
 
 
 class DataCleaningAgent:
+    def __init__(self, date_locale: str = "us"):
+        self.date_locale = date_locale
+
     def clean_sheet(
         self,
         grid: list[list[Any]],
@@ -89,8 +94,11 @@ class DataCleaningAgent:
                 if mapping and mapping.canonical_field:
                     value_type = CANONICAL_SCHEMA[mapping.canonical_field]["value_type"]
 
-                cleaner = CLEANERS.get(value_type, CLEANERS["text"])
-                cleaned_value, valid, note = cleaner(raw_value)
+                if value_type == "date":
+                    cleaned_value, valid, note = parse_date_flexible(raw_value, locale=self.date_locale)
+                else:
+                    cleaner = CLEANERS.get(value_type, CLEANERS["text"])
+                    cleaned_value, valid, note = cleaner(raw_value)
 
                 if cleaned_value is not None:
                     row_had_any_value = True

@@ -9,11 +9,18 @@ from typing import Any
 import yaml
 
 DEFAULT_CONFIG: dict[str, Any] = {
+    "max_file_size_mb": 100,
+    "max_processing_time_seconds": 300,
+    "max_rows_per_sheet": 100000,
+    "detect_formulas": True,
+    "cross_sheet_dedup": True,
+    "cross_sheet_overlap_threshold": 0.8,
     "fuzzy_match_threshold": 0.72,
     "sparse_row_threshold": 0.9,   # a row with >=90% empty cells is treated as a separator
     "duplicate_key_fields": ["email", "id", "full_name"],  # first available field is used
     "enable_local_llm": False,
     "llm_model": "llama3.1",
+    "date_locale": "us",
 }
 
 

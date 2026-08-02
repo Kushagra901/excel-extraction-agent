@@ -110,6 +110,36 @@ class ValidationAgent:
 
         return dup_count, dup_refs
 
+    def find_cross_sheet_duplicates(self, records: list[Record]) -> tuple[int, list[tuple[str, str]]]:
+        seen: dict[str, Record] = {}
+        dup_count = 0
+        dup_refs: list[tuple[str, str]] = []
+
+        for record in records:
+            key_value = None
+            for field in self.duplicate_key_fields:
+                val = record.data.get(field)
+                if val not in (None, ""):
+                    key_value = f"{field}::{str(val).strip().lower()}"
+                    break
+            if key_value is None:
+                continue
+
+            if key_value in seen:
+                first_record = seen[key_value]
+                if first_record.source_sheet != record.source_sheet:
+                    dup_count += 1
+                    dup_refs.append(
+                        (
+                            f"{first_record.source_sheet}:row {first_record.source_row}",
+                            f"{record.source_sheet}:row {record.source_row}",
+                        )
+                    )
+            else:
+                seen[key_value] = record
+
+        return dup_count, dup_refs
+
     @staticmethod
     def _count_suspicious(sheet_name: str, records: list[Record], ctx: ExtractionContext) -> int:
         suspicious = 0

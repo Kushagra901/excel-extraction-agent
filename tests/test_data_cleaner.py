@@ -64,3 +64,31 @@ def test_phone_normalization():
 
     value, valid, note = normalize_phone("123")
     assert not valid
+
+
+def test_date_locale_us_vs_international():
+    # Ambiguous date "03/04/2026"
+    val_us, valid_us, note_us = parse_date_flexible("03/04/2026", locale="us")
+    assert valid_us
+    assert val_us == "2026-03-04"
+    assert note_us is not None
+    assert "Ambiguous date '03/04/2026' — interpreted as 2026-03-04 using us format" in note_us
+
+    val_intl, valid_intl, note_intl = parse_date_flexible("03/04/2026", locale="international")
+    assert valid_intl
+    assert val_intl == "2026-04-03"
+    assert note_intl is not None
+    assert "Ambiguous date '03/04/2026' — interpreted as 2026-04-03 using international format" in note_intl
+
+
+def test_unambiguous_date_no_ambiguity_warning():
+    val, valid, note = parse_date_flexible("2026-01-15", locale="us")
+    assert valid
+    assert val == "2026-01-15"
+    assert note is None or "Ambiguous date" not in note
+
+    val, valid, note = parse_date_flexible("01/20/2026", locale="us")
+    assert valid
+    assert val == "2026-01-20"
+    assert note is None or "Ambiguous date" not in note
+
